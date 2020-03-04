@@ -179,10 +179,7 @@ class EditWorksheetTest(UITester):
 
 def main():
     # Add ui tests here and run them
-    all_tests = [
-        WorksheetTest(),
-        EditWorksheetTest()
-    ]
+    all_tests = [WorksheetTest(), EditWorksheetTest()]
 
     start_time = time.time()
     for test in all_tests:
