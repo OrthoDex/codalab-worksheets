@@ -31,19 +31,7 @@ jobs:
         - python3 codalab_service.py start --services default monitor --version ${TRAVIS_BRANCH}
         - pip install -r requirements.txt
       before_script:
-        # Chrome
-        - wget https://chromedriver.storage.googleapis.com/2.41/chromedriver_linux64.zip
-        - unzip chromedriver_linux64.zip
-        - sudo mv chromedriver /usr/bin/chromedriver
-        - sudo chown root:root /usr/bin/chromedriver
-        - sudo chmod +x /usr/bin/chromedriver
-        # Firefox
-        - wget https://github.com/mozilla/geckodriver/releases/download/v0.21.0/geckodriver-v0.21.0-linux64.tar.gz
-        - mkdir geckodriver
-        - tar -xzf geckodriver-v0.21.0-linux64.tar.gz -C geckodriver
-        - sudo mv geckodriver /usr/bin/geckodriver
-        - sudo chown root:root /usr/bin/geckodriver
-        - sudo chmod +x /usr/bin/geckodriver
+        - ./scripts/test-setup.sh
         - export PATH=$PATH:/usr/bin/geckodriver
       script:
         - python3 codalab_service.py test --version ${TRAVIS_BRANCH} default

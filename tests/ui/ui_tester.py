@@ -13,8 +13,13 @@ from selenium.webdriver.support.wait import WebDriverWait
 
 
 class UITester(ABC):
+    # This image diff threshold is set to an upper bound of 10% for now. We should try our best
+    # to at least maintain this upper bound.
     _SCREENSHOT_DIFF_THRESHOLD_PERCENT = 10
+
     _BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+    _DEFAULT_USERNAME = os.getenv('CODALAB_USERNAME', 'codalab')
+    _DEFAULT_PASSWORD = os.getenv('CODALAB_PASSWORD', 'codalab')
 
     def __init__(self, test_name, base_url='http://localhost'):
         self._test_name = test_name
@@ -99,6 +104,12 @@ class UITester(ABC):
             diff_percent = (
                 diff(baseline_img, out_img, delete_diff_file=True, ignore_alpha=True) * 100
             )
+            print(
+                '{}% difference in {} for {}'.format(
+                    diff_percent, self._get_browser(), screenshot_filename
+                )
+            )
+
             if diff_percent > UITester._SCREENSHOT_DIFF_THRESHOLD_PERCENT:
                 # If an image comparison has failed, generate diff and print an error message in red
                 has_failed = True
@@ -169,7 +180,7 @@ class EditWorksheetTest(UITester):
 def main():
     # Add ui tests here and run them
     all_tests = [
-        # WorksheetTest(),
+        WorksheetTest(),
         EditWorksheetTest()
     ]
 

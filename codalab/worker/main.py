@@ -227,9 +227,16 @@ def parse_cpuset_args(arg):
     Parse given arg into a set of integers representing cpus
 
     Arguments:
-        arg: comma seperated string of ints, or "ALL" representing all available cpus
+        arg: comma separated string of ints, or "ALL" representing all available cpus
     """
-    cpu_count = multiprocessing.cpu_count()
+    try:
+        # Get number of cores that the process can actually use.
+        cpu_count = len(os.sched_getaffinity(0))
+    except AttributeError:
+        # os.sched_getaffinity() isn't available on all platforms,
+        # so fallback to using the number of physical cores.
+        cpu_count = multiprocessing.cpu_count()
+
     if arg == 'ALL':
         cpuset = list(range(cpu_count))
     else:
@@ -252,7 +259,7 @@ def parse_gpuset_args(arg):
     Parse given arg into a set of strings representing gpu UUIDs
 
     Arguments:
-        arg: comma seperated string of ints, or "ALL" representing all gpus
+        arg: comma separated string of ints, or "ALL" representing all gpus
     """
     if arg == '':
         return set()
