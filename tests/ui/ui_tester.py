@@ -42,7 +42,7 @@ class UITester(ABC):
         self._driver = webdriver.Firefox(log_path='', firefox_options=options)
         self.test()
         self._driver.close()
-        
+
         # Test Chrome
         options = ChromeOptions()
         add_headless(options)
@@ -268,9 +268,7 @@ class EditWorksheetTest(UITester):
 
         # Edit metadata of the last bundle
         self.edit_last_bundle_metadata(
-            'New Name Given to this Bundle',
-            'New Description given to this bundle. ' * 5,
-            'none',
+            'New Name Given to this Bundle', 'New Description given to this bundle. ' * 5, 'none'
         )
 
         # Refresh the page to ensure changes got persisted
