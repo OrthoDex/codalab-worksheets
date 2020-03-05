@@ -117,6 +117,10 @@ class UITester(ABC):
     def longer_pause(self):
         time.sleep(3)
 
+    def set_browser_size(self, width=1500, height=1200):
+        self._driver.set_window_position(0, 0)
+        self._driver.set_window_size(width, height)
+
     def click(self, by, selector):
         self._driver.find_element(by, selector).click()
 
@@ -238,6 +242,7 @@ class WorksheetTest(UITester):
         super().__init__('worksheet')
 
     def test(self):
+        self.set_browser_size()
         self.login()
         self.wait_until_worksheet_content_loads()
         self.click(By.LINK_TEXT, 'Small Worksheet [cl_small_worksheet]')
@@ -252,6 +257,7 @@ class EditWorksheetTest(UITester):
         super().__init__('edit_worksheet')
 
     def test(self):
+        self.set_browser_size()
         self.login()
         self.wait_until_worksheet_content_loads()
 
