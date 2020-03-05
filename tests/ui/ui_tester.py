@@ -67,6 +67,7 @@ class UITester(ABC):
     def rerun_last_bundle(self):
         self.expand_last_bundle()
         self.pause()
+        self.scroll_to_bottom('worksheet_container')
         self.click(By.XPATH, "//span[.='Edit and Rerun']")
         self.pause()
         self.scroll_to_bottom('worksheet_container')
@@ -93,12 +94,14 @@ class UITester(ABC):
         self.select_option(select_boxes[-1], permission)
 
     def expand_last_bundle(self):
-        self.longer_pause()
+        self.pause()
+        self.scroll_to_bottom('worksheet_container')
         last_bundle_row = self._get_partial_matched_elements('class', 'BundleRow-withCheckBox')[-1]
         last_bundle_row.find_element(By.CSS_SELECTOR, 'button').click()
 
     def add_text_to_worksheet(self, text):
         self.click(By.CSS_SELECTOR, '[aria-label="Add Text"]')
+        self.pause()
         self.scroll_to_bottom('worksheet_container')
         self.fill_field(
             By.XPATH, self.constructPartialSelector('class', 'MuiInputBase-input'), text
