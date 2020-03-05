@@ -295,7 +295,7 @@ class EditWorksheetTest(UITester):
 
 
 def main():
-    # Add ui tests here and run them
+    # Register UI tests here to run them
     all_tests = [WorksheetTest(), EditWorksheetTest()]
 
     start_time = time.time()
