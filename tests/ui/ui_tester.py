@@ -307,7 +307,7 @@ def main():
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Run screenshot tests for the CodaLab UI')
+    parser = argparse.ArgumentParser(description='Run frontend automation tests for the CodaLab UI')
     parser.add_argument(
         '--headless', action='store_true', help='Whether to test using headless browsers'
     )
