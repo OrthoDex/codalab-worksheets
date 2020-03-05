@@ -58,17 +58,20 @@ class UITester(ABC):
 
     def add_run_to_worksheet(self, command):
         self.click(By.CSS_SELECTOR, '[aria-label="Add New Run"]')
-        time.sleep(1)
-        self._scroll_to_bottom('worksheet_container')
+        self.pause()
+        self.scroll_to_bottom('worksheet_container')
         self._driver.switch_to.active_element.send_keys(command)
         self.click(By.XPATH, "//span[.='Confirm']")
+        self.longer_pause()
 
     def rerun_last_bundle(self):
         self.expand_last_bundle()
+        self.pause()
         self.click(By.XPATH, "//span[.='Edit and Rerun']")
-        time.sleep(1)
-        self._scroll_to_bottom('worksheet_container')
+        self.pause()
+        self.scroll_to_bottom('worksheet_container')
         self.click(By.XPATH, "//span[.='Confirm']")
+        self.longer_pause()
 
     def edit_last_bundle_metadata(self, name, description, permission):
         def edit_field(field, text):
@@ -78,30 +81,36 @@ class UITester(ABC):
 
         # Edit name and description
         self.expand_last_bundle()
+        self.pause()
         editable_fields = self._get_partial_matched_elements('class', 'editable-field')
         edit_field(editable_fields[-2], name)
         edit_field(editable_fields[-1], description)
 
         # Edit bundle permission
-        self._scroll_to_bottom('worksheet_container')
+        self.scroll_to_bottom('worksheet_container')
         self._get_partial_matched_elements('class', 'MuiSvgIcon-root')[-1].click()
         select_boxes = self._get_partial_matched_elements('class', 'MuiNativeSelect-select')
         self.select_option(select_boxes[-1], permission)
 
     def expand_last_bundle(self):
+        self.longer_pause()
         last_bundle_row = self._get_partial_matched_elements('class', 'BundleRow-withCheckBox')[-1]
         last_bundle_row.find_element(By.CSS_SELECTOR, 'button').click()
 
     def add_text_to_worksheet(self, text):
         self.click(By.CSS_SELECTOR, '[aria-label="Add Text"]')
-        self._scroll_to_bottom('worksheet_container')
+        self.scroll_to_bottom('worksheet_container')
         self.fill_field(
             By.XPATH, self.constructPartialSelector('class', 'MuiInputBase-input'), text
         )
         self.click(By.XPATH, "//span[.='Save']")
+        self.pause()
 
-    def save_screenshot(self, path, filename):
-        self._driver.save_screenshot(os.path.join(path, filename))
+    def pause(self):
+        time.sleep(1)
+
+    def longer_pause(self):
+        time.sleep(3)
 
     def click(self, by, selector):
         self._driver.find_element(by, selector).click()
@@ -123,7 +132,7 @@ class UITester(ABC):
 
     def switch_to_new_tab(self):
         # Just give enough time for the new tab to get opened
-        time.sleep(1)
+        self.pause()
         self._driver.switch_to.window(
             self._driver.window_handles[len(self._driver.window_handles) - 1]
         )
@@ -144,7 +153,8 @@ class UITester(ABC):
         for i in range(num_of_screenshots):
             y = (i / num_of_screenshots) * scroll_height
             self._driver.execute_script('{}.scrollTo(0, {})'.format(element, y))
-            self.save_screenshot(output_dir, '{}{}.png'.format(self._test_name, i + 1))
+            path = os.path.join(output_dir, '{}{}.png'.format(self._test_name, i + 1))
+            self._driver.save_screenshot(path)
 
     def compare_to_baselines(self, num_of_screenshots=10):
         out_dir = self._get_output_dir('out')
@@ -188,9 +198,12 @@ class UITester(ABC):
 
     def make_name_unique(self, name):
         # Appends some unique identifier to the string input
-        return name + self._random_id()
+        random_id = ''.join(
+            random.choice(string.ascii_lowercase + string.digits) for _ in range(16)
+        )
+        return name + random_id
 
-    def _scroll_to_bottom(self, selector):
+    def scroll_to_bottom(self, selector):
         element = "document.getElementById('{}')".format(selector)
         scroll_height = float(self._driver.execute_script('return {}.scrollHeight'.format(element)))
         self._driver.execute_script('{}.scrollTo(0, {})'.format(element, scroll_height))
@@ -213,9 +226,6 @@ class UITester(ABC):
 
     def _get_browser(self):
         return self._driver.capabilities['browserName']
-
-    def _random_id(self):
-        return ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(16))
 
 
 class WorksheetTest(UITester):
@@ -246,23 +256,22 @@ class EditWorksheetTest(UITester):
         self._driver.find_element(By.XPATH, "//span[.='Confirm']").find_element(
             By.XPATH, './..'
         ).click()
-        time.sleep(2)
+        self.longer_pause()
 
         # Add a title to the worksheet
         self.click(By.CLASS_NAME, 'editable-field')
         self._driver.switch_to.active_element.send_keys(
             'Some Random Title for the UI Test Edit Worksheet in CodaLab'
         )
+        self._driver.switch_to.active_element.send_keys(Keys.ENTER)
 
         # Add text to the new worksheet
         self.add_text_to_worksheet('This is some text. ' * 25)
         self.add_text_to_worksheet('This is some more text. ' * 25)
 
-        # Add some bundles and rerun them
+        # Add some bundles and rerun the last bundle
         self.add_run_to_worksheet('echo hello')
-        self.rerun_last_bundle()
         self.add_run_to_worksheet('ls')
-        self.rerun_last_bundle()
         self.add_run_to_worksheet('date')
         self.rerun_last_bundle()
 
@@ -271,23 +280,20 @@ class EditWorksheetTest(UITester):
             'New Name Given to this Bundle', 'New Description given to this bundle. ' * 5, 'none'
         )
 
-        # Refresh the page to ensure changes got persisted
+        # Refresh the page to ensure that new changes are persisted
         self._driver.refresh()
         self.wait_until_worksheet_content_loads()
         self.expand_last_bundle()
 
         # Take screenshots and compare to the existing baseline images
-        # num_of_screenshots = 2
-        # self.output_images('worksheet_container', num_of_screenshots)
-        # self.compare_to_baselines(num_of_screenshots)
+        num_of_screenshots = 2
+        self.output_images('worksheet_container', num_of_screenshots)
+        self.compare_to_baselines(num_of_screenshots)
 
 
 def main():
     # Add ui tests here and run them
-    all_tests = [
-        # WorksheetTest(),
-        EditWorksheetTest()
-    ]
+    all_tests = [WorksheetTest(), EditWorksheetTest()]
 
     start_time = time.time()
     for test in all_tests:
