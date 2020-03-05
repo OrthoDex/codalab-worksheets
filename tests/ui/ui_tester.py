@@ -103,10 +103,11 @@ class UITester(ABC):
         self.click(By.CSS_SELECTOR, '[aria-label="Add Text"]')
         self.pause()
         self.scroll_to_bottom('worksheet_container')
-        self.pause()
-        self.fill_field(
-            By.XPATH, self.constructPartialSelector('class', 'MuiInputBase-input'), text
-        )
+        # self.fill_field(
+        #     By.XPATH, self.constructPartialSelector('class', 'MuiInputBase-input'), text
+        # )
+        last_text_box = self._get_partial_matched_elements('class', 'MuiInputBase-input')[-1]
+        last_text_box.send_keys(text)
         self.click(By.XPATH, "//span[.='Save']")
         self.pause()
 
