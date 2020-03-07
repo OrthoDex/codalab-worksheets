@@ -36,17 +36,17 @@ class UITester(ABC):
             if args.headless:
                 browser_options.add_argument('--headless')
 
-        # Test Firefox
-        options = FirefoxOptions()
-        add_headless(options)
-        self._driver = webdriver.Firefox(log_path='', firefox_options=options)
-        self.test()
-        self._driver.close()
-
         # Test Chrome
         options = ChromeOptions()
         add_headless(options)
         self._driver = webdriver.Chrome(chrome_options=options)
+        self.test()
+        self._driver.close()
+
+        # Test Firefox
+        options = FirefoxOptions()
+        add_headless(options)
+        self._driver = webdriver.Firefox(log_path='', firefox_options=options)
         self.test()
         self._driver.close()
 
@@ -276,6 +276,8 @@ class EditWorksheetTest(UITester):
         self._driver.switch_to.active_element.send_keys(Keys.ENTER)
 
         # Add text to the new worksheet
+        # TODO: check this -tony
+        self.longer_pause()
         self.add_text_to_worksheet('This is some text. ' * 25)
 
         # Add a bundle and rerun it
