@@ -98,6 +98,7 @@ class UITester(ABC):
         self.scroll_to_bottom('worksheet_container')
         last_bundle_row = self._get_partial_matched_elements('class', 'BundleRow-withCheckBox')[-1]
         last_bundle_row.find_element(By.CSS_SELECTOR, 'button').click()
+        self.pause()
 
     def add_text_to_worksheet(self, text):
         self.click(By.CSS_SELECTOR, '[aria-label="Add Text"]')
