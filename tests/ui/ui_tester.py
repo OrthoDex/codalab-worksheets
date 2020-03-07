@@ -103,11 +103,9 @@ class UITester(ABC):
         self.click(By.CSS_SELECTOR, '[aria-label="Add Text"]')
         self.pause()
         self.scroll_to_bottom('worksheet_container')
-        # self.fill_field(
-        #     By.XPATH, self.constructPartialSelector('class', 'MuiInputBase-input'), text
-        # )
-        last_text_box = self._get_partial_matched_elements('class', 'MuiInputBase-input')[-1]
-        last_text_box.send_keys(text)
+        self.fill_field(
+            By.XPATH, self.constructPartialSelector('class', 'MuiInputBase-input'), text
+        )
         self.click(By.XPATH, "//span[.='Save']")
         self.pause()
 
@@ -239,7 +237,7 @@ class UITester(ABC):
 
 class WorksheetTest(UITester):
     def __init__(self):
-        super().__init__('worksheet')
+        super().__init__('worksheet_rendering')
 
     def test(self):
         self.set_browser_size()
@@ -278,12 +276,9 @@ class EditWorksheetTest(UITester):
 
         # Add text to the new worksheet
         self.add_text_to_worksheet('This is some text. ' * 25)
-        self.add_text_to_worksheet('This is some more text. ' * 25)
 
-        # Add some bundles and rerun the last bundle
+        # Add a bundle and rerun it
         self.add_run_to_worksheet('echo hello')
-        self.add_run_to_worksheet('ls')
-        self.add_run_to_worksheet('date')
         self.rerun_last_bundle()
 
         # Edit metadata of the last bundle
