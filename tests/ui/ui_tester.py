@@ -104,9 +104,9 @@ class UITester(ABC):
         self.click(By.CSS_SELECTOR, '[aria-label="Add Text"]')
         self.pause()
         self.scroll_to_bottom('worksheet_container')
-        self.fill_field(
-            By.XPATH, self.constructPartialSelector('class', 'MuiInputBase-input'), text
-        )
+        # TODO: here -tony
+        last_text_box = self._get_partial_matched_elements('class', 'MuiPrivateTextarea-textarea')[-1]
+        last_text_box.send_keys(text)
         self.click(By.XPATH, "//span[.='Save']")
         self.pause()
 
@@ -302,7 +302,9 @@ class EditWorksheetTest(UITester):
 
 def main():
     # Register UI tests here to run them
-    all_tests = [WorksheetTest(), EditWorksheetTest()]
+    all_tests = [
+        # WorksheetTest(),
+        EditWorksheetTest()]
 
     start_time = time.time()
     for test in all_tests:
