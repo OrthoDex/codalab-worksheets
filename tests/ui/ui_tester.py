@@ -154,7 +154,7 @@ class UITester(ABC):
             self.click(By.CSS_SELECTOR, '[aria-label="Add Text"]')
         self.pause()
         self.scroll_to_bottom('worksheet_container')
-        self.longer_pause()
+        self.pause()
         last_text_box = self.browser.find_elements_by_tag_name('textarea')[-1]
         last_text_box.send_keys(text)
         if use_keyboard_shortcut:
