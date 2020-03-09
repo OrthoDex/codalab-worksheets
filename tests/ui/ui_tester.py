@@ -90,7 +90,6 @@ class UITester(ABC):
 
         # Edit name and description
         self.expand_last_bundle()
-        self.pause()
         editable_fields = self._get_partial_matched_elements('class', 'editable-field')
         edit_field(editable_fields[-2], name)
         edit_field(editable_fields[-1], description)
@@ -104,8 +103,7 @@ class UITester(ABC):
     def expand_last_bundle(self):
         self.pause()
         self.scroll_to_bottom('worksheet_container')
-        last_bundle_row = self._get_partial_matched_elements('class', 'BundleRow-withCheckBox')[-1]
-        last_bundle_row.find_element(By.CSS_SELECTOR, 'button').click()
+        self._driver.find_elements(By.TAG_NAME, 'button')[-1].click()
         self.pause()
 
     def add_text_to_worksheet(self, text):
