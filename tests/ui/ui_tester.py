@@ -36,17 +36,17 @@ class UITester(ABC):
             if args.headless:
                 browser_options.add_argument('--headless')
 
-        # Test Chrome
-        options = ChromeOptions()
-        add_headless(options)
-        self._driver = webdriver.Chrome(chrome_options=options)
-        self.test()
-        self._driver.close()
-
         # Test Firefox
         options = FirefoxOptions()
         add_headless(options)
         self._driver = webdriver.Firefox(log_path='', firefox_options=options)
+        self.test()
+        self._driver.close()
+
+        # Test Chrome
+        options = ChromeOptions()
+        add_headless(options)
+        self._driver = webdriver.Chrome(chrome_options=options)
         self.test()
         self._driver.close()
 
@@ -56,19 +56,27 @@ class UITester(ABC):
         self.fill_field(By.ID, 'id_login', username)
         self.fill_field(By.ID, 'id_password', password, press_enter=True)
 
-    def add_run_to_worksheet(self, command):
-        self.click(By.CSS_SELECTOR, '[aria-label="Add New Run"]')
+    def add_run_to_worksheet(self, command, use_keyboard_shortcut=False):
+        if use_keyboard_shortcut:
+            # ar = Add a new run
+            self.send_keyboard_shortcut('ar')
+        else:
+            self.click(By.CSS_SELECTOR, '[aria-label="Add New Run"]')
         self.pause()
         self.scroll_to_bottom('worksheet_container')
         self._driver.switch_to.active_element.send_keys(command)
         self.click(By.XPATH, "//span[.='Confirm']")
         self.longer_pause()
 
-    def rerun_last_bundle(self):
-        self.expand_last_bundle()
-        self.pause()
-        self.scroll_to_bottom('worksheet_container')
-        self.click(By.XPATH, "//span[.='Edit and Rerun']")
+    def rerun_last_bundle(self, use_keyboard_shortcut=False):
+        if use_keyboard_shortcut:
+            # an = Edit and add a rerun
+            self.send_keyboard_shortcut('an')
+        else:
+            self.expand_last_bundle()
+            self.pause()
+            self.scroll_to_bottom('worksheet_container')
+            self.click(By.XPATH, "//span[.='Edit and Rerun']")
         self.pause()
         self.scroll_to_bottom('worksheet_container')
         self.click(By.XPATH, "//span[.='Confirm']")
@@ -105,10 +113,7 @@ class UITester(ABC):
         self.pause()
         self.scroll_to_bottom('worksheet_container')
         # TODO: check here -tony
-        time.sleep(10)
-        last_text_box = self._get_partial_matched_elements('class', 'MuiPrivateTextarea-textarea')[
-            -1
-        ]
+        last_text_box = self._driver.find_elements(By.TAG_NAME, 'textarea')[-1]
         last_text_box.send_keys(text)
         self.click(By.XPATH, "//span[.='Save']")
         self.pause()
@@ -125,6 +130,9 @@ class UITester(ABC):
 
     def click(self, by, selector):
         self._driver.find_element(by, selector).click()
+
+    def send_keyboard_shortcut(self, keys):
+        self._driver.find_element(By.TAG_NAME, 'html').send_keys(keys)
 
     def fill_field(self, by, selector, text, press_enter=False):
         textbox = self._driver.find_element(by, selector)
@@ -279,11 +287,16 @@ class EditWorksheetTest(UITester):
         self._driver.switch_to.active_element.send_keys(Keys.ENTER)
 
         # Add text to the new worksheet
-        # self.add_text_to_worksheet('This is some text. ' * 25)
+        self.add_text_to_worksheet('This is some text. ' * 25)
 
         # Add a bundle and rerun it
         self.add_run_to_worksheet('echo hello')
         self.rerun_last_bundle()
+
+        # Test keyboard shortcuts
+        self.add_run_to_worksheet('echo keyboard shortcut', use_keyboard_shortcut=True)
+        # TODO: Keyboard shortcut "a n" doesn't seem to work?
+        # self.rerun_last_bundle(use_keyboard_shortcut=True)
 
         # Edit metadata of the last bundle
         self.edit_last_bundle_metadata(
