@@ -36,17 +36,17 @@ class UITester(ABC):
             if args.headless:
                 browser_options.add_argument('--headless')
 
-        # Test Firefox
-        options = FirefoxOptions()
-        add_headless(options)
-        self.browser = webdriver.Firefox(log_path='', firefox_options=options)
-        self.test()
-        self.browser.close()
-
         # Test Chrome
         options = ChromeOptions()
         add_headless(options)
         self.browser = webdriver.Chrome(chrome_options=options)
+        self.test()
+        self.browser.close()
+
+        # Test Firefox
+        options = FirefoxOptions()
+        add_headless(options)
+        self.browser = webdriver.Firefox(log_path='', firefox_options=options)
         self.test()
         self.browser.close()
 
