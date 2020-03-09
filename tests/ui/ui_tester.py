@@ -104,7 +104,8 @@ class UITester(ABC):
         self.click(By.CSS_SELECTOR, '[aria-label="Add Text"]')
         self.pause()
         self.scroll_to_bottom('worksheet_container')
-        # TODO: here -tony
+        # TODO: check here -tony
+        time.sleep(10)
         last_text_box = self._get_partial_matched_elements('class', 'MuiPrivateTextarea-textarea')[
             -1
         ]
@@ -278,8 +279,6 @@ class EditWorksheetTest(UITester):
         self._driver.switch_to.active_element.send_keys(Keys.ENTER)
 
         # Add text to the new worksheet
-        # TODO: check this -tony
-        self.longer_pause()
         self.add_text_to_worksheet('This is some text. ' * 25)
 
         # Add a bundle and rerun it
