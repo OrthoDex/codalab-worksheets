@@ -39,19 +39,19 @@ class UITester(ABC):
         # Test Firefox
         options = FirefoxOptions()
         add_headless(options)
-        self._driver = webdriver.Firefox(log_path='', firefox_options=options)
+        self.browser = webdriver.Firefox(log_path='', firefox_options=options)
         self.test()
-        self._driver.close()
+        self.browser.close()
 
         # Test Chrome
         options = ChromeOptions()
         add_headless(options)
-        self._driver = webdriver.Chrome(chrome_options=options)
+        self.browser = webdriver.Chrome(chrome_options=options)
         self.test()
-        self._driver.close()
+        self.browser.close()
 
     def login(self, username='codalab', password='codalab'):
-        self._driver.get(self.get_url('/home'))
+        self.browser.get(self.get_url('/home'))
         self.click(By.LINK_TEXT, 'LOGIN')
         self.fill_field(By.ID, 'id_login', username)
         self.fill_field(By.ID, 'id_password', password, press_enter=True)
@@ -64,13 +64,23 @@ class UITester(ABC):
             self.click(By.CSS_SELECTOR, '[aria-label="Add New Run"]')
         self.pause()
         self.scroll_to_bottom('worksheet_container')
-        self._driver.switch_to.active_element.send_keys(command)
-        self.click(By.XPATH, "//span[.='Confirm']")
+        active_textbox = self.browser.switch_to.active_element
+        active_textbox.send_keys(command)
+        self.pause()
+        if use_keyboard_shortcut:
+            self.save_edit_keyboard_shortcut(active_textbox)
+        else:
+            self.click(By.XPATH, "//span[.='Confirm']")
         self.longer_pause()
 
     def rerun_last_bundle(self, use_keyboard_shortcut=False):
         if use_keyboard_shortcut:
+            # Shift + g = Jump to the last bundle
+            self.send_keyboard_shortcut(Keys.SHIFT + 'g')
+            # Enter = Expand bundle
+            self.send_keyboard_shortcut(Keys.ENTER)
             # an = Edit and add a rerun
+            # This keyboard shortcut only works if the bundle is expanded.
             self.send_keyboard_shortcut('an')
         else:
             self.expand_last_bundle()
@@ -78,43 +88,88 @@ class UITester(ABC):
             self.scroll_to_bottom('worksheet_container')
             self.click(By.XPATH, "//span[.='Edit and Rerun']")
         self.pause()
-        self.scroll_to_bottom('worksheet_container')
-        self.click(By.XPATH, "//span[.='Confirm']")
+        active_textbox = self.browser.switch_to.active_element
+        active_textbox.send_keys(' rerunning bundle...')
+        if use_keyboard_shortcut:
+            self.save_edit_keyboard_shortcut(active_textbox)
+        else:
+            self.scroll_to_bottom('worksheet_container')
+            self.click(By.XPATH, "//span[.='Confirm']")
         self.longer_pause()
 
     def edit_last_bundle_metadata(self, name, description, permission):
         def edit_field(field, text):
             field.click()
-            self._driver.switch_to.active_element.send_keys(text)
-            self._driver.switch_to.active_element.send_keys(Keys.ENTER)
+            self.browser.switch_to.active_element.send_keys(text)
+            self.browser.switch_to.active_element.send_keys(Keys.ENTER)
 
         # Edit name and description
         self.expand_last_bundle()
-        editable_fields = self._get_partial_matched_elements('class', 'editable-field')
+        editable_fields = self.browser.find_elements(By.CLASS_NAME, 'editable-field')
         edit_field(editable_fields[-2], name)
         edit_field(editable_fields[-1], description)
 
         # Edit bundle permission
         self.scroll_to_bottom('worksheet_container')
         self._get_partial_matched_elements('class', 'MuiSvgIcon-root')[-1].click()
-        select_boxes = self._get_partial_matched_elements('class', 'MuiNativeSelect-select')
+        self.browser.find_elements_by_tag_name('svg')[-1].click()
+        select_boxes = self.browser.find_elements_by_tag_name('select')
         self.select_option(select_boxes[-1], permission)
+        self.longer_pause()
+
+    def toggle_web_terminal(self, use_keyboard_shortcut=False):
+        if use_keyboard_shortcut:
+            # Shift + c = Show/hide web terminal
+            self.send_keyboard_shortcut(Keys.SHIFT + 'c')
+        else:
+            self.browser.find_element_by_id('terminal-button').click()
+        self.pause()
+
+    def edit_source(self, text, use_keyboard_shortcut=False):
+        if use_keyboard_shortcut:
+            # Shift + e = Edit source mode
+            self.send_keyboard_shortcut(Keys.SHIFT + 'e')
+        else:
+            self.click(By.CSS_SELECTOR, '[aria-label="Edit Source"]')
+        source_field = self.browser.switch_to.active_element
+        source_field.send_keys(Keys.ENTER + Keys.ENTER)
+        source_field.send_keys(text)
+        if use_keyboard_shortcut:
+            self.pause()
+            self.save_edit_keyboard_shortcut(source_field)
+        else:
+            self.click(By.CSS_SELECTOR, '[aria-label="Save Edit"]')
+        self.longer_pause()
 
     def expand_last_bundle(self):
         self.pause()
         self.scroll_to_bottom('worksheet_container')
-        self._driver.find_elements(By.TAG_NAME, 'button')[-1].click()
+        self.browser.find_elements_by_tag_name('button')[-1].click()
         self.pause()
 
-    def add_text_to_worksheet(self, text):
-        self.click(By.CSS_SELECTOR, '[aria-label="Add Text"]')
+    def add_text_to_worksheet(self, text, use_keyboard_shortcut=False):
+        if use_keyboard_shortcut:
+            # at = Add text
+            self.send_keyboard_shortcut('at')
+        else:
+            self.click(By.CSS_SELECTOR, '[aria-label="Add Text"]')
         self.pause()
         self.scroll_to_bottom('worksheet_container')
-        # TODO: check here -tony
-        last_text_box = self._driver.find_elements(By.TAG_NAME, 'textarea')[-1]
+        last_text_box = self.browser.find_elements_by_tag_name('textarea')[-1]
         last_text_box.send_keys(text)
-        self.click(By.XPATH, "//span[.='Save']")
+        if use_keyboard_shortcut:
+            self.save_edit_keyboard_shortcut(last_text_box)
+        else:
+            self.click(By.XPATH, "//span[.='Save']")
         self.pause()
+
+    def save_edit_keyboard_shortcut(self, element):
+        # Control + Enter = Save current edit
+        element.send_keys(Keys.CONTROL + Keys.ENTER)
+
+    def refresh_worksheet(self):
+        # Shift + r = Refresh worksheet
+        self.send_keyboard_shortcut(Keys.SHIFT + 'r')
 
     def pause(self):
         time.sleep(1)
@@ -123,17 +178,18 @@ class UITester(ABC):
         time.sleep(3)
 
     def set_browser_size(self, width=1500, height=1200):
-        self._driver.set_window_position(0, 0)
-        self._driver.set_window_size(width, height)
+        self.browser.set_window_position(0, 0)
+        self.browser.set_window_size(width, height)
 
     def click(self, by, selector):
-        self._driver.find_element(by, selector).click()
+        self.browser.find_element(by, selector).click()
 
     def send_keyboard_shortcut(self, keys):
-        self._driver.find_element(By.TAG_NAME, 'html').send_keys(keys)
+        self.pause()
+        self.browser.find_element(By.TAG_NAME, 'html').send_keys(keys)
 
     def fill_field(self, by, selector, text, press_enter=False):
-        textbox = self._driver.find_element(by, selector)
+        textbox = self.browser.find_element(by, selector)
         textbox.send_keys(text)
         if press_enter:
             textbox.send_keys(Keys.ENTER)
@@ -143,15 +199,15 @@ class UITester(ABC):
 
     def wait_until_page_loads(self, selector, by=By.CLASS_NAME):
         timeout_message = 'Timed out while waiting for {}: {}.'.format(by, selector)
-        return WebDriverWait(self._driver, 15).until(
+        return WebDriverWait(self.browser, 15).until(
             EC.presence_of_element_located((by, selector)), message=timeout_message
         )
 
     def switch_to_new_tab(self):
         # Just give enough time for the new tab to get opened
         self.pause()
-        self._driver.switch_to.window(
-            self._driver.window_handles[len(self._driver.window_handles) - 1]
+        self.browser.switch_to.window(
+            self.browser.window_handles[len(self.browser.window_handles) - 1]
         )
 
     def select_option(self, element, to_select):
@@ -166,12 +222,12 @@ class UITester(ABC):
     def output_images(self, selector, num_of_screenshots=10):
         output_dir = self._get_output_dir('out')
         element = "document.getElementById('{}')".format(selector)
-        scroll_height = float(self._driver.execute_script('return {}.scrollHeight'.format(element)))
+        scroll_height = float(self.browser.execute_script('return {}.scrollHeight'.format(element)))
         for i in range(num_of_screenshots):
             y = (i / num_of_screenshots) * scroll_height
-            self._driver.execute_script('{}.scrollTo(0, {})'.format(element, y))
+            self.browser.execute_script('{}.scrollTo(0, {})'.format(element, y))
             path = os.path.join(output_dir, '{}{}.png'.format(self._test_name, i + 1))
-            self._driver.save_screenshot(path)
+            self.browser.save_screenshot(path)
 
     def compare_to_baselines(self, num_of_screenshots=10):
         out_dir = self._get_output_dir('out')
@@ -188,7 +244,7 @@ class UITester(ABC):
             )
             print(
                 '{}% difference in {} for {}'.format(
-                    diff_percent, self._get_browser(), screenshot_filename
+                    diff_percent, self._get_browser_name(), screenshot_filename
                 )
             )
 
@@ -204,7 +260,7 @@ class UITester(ABC):
                 )
                 print(
                     '\033[91mScreenshot comparison failed in {} for {} by {}%\033[0m'.format(
-                        self._get_browser(), screenshot_filename, diff_percent
+                        self._get_browser_name(), screenshot_filename, diff_percent
                     )
                 )
 
@@ -222,11 +278,11 @@ class UITester(ABC):
 
     def scroll_to_bottom(self, selector):
         element = "document.getElementById('{}')".format(selector)
-        scroll_height = float(self._driver.execute_script('return {}.scrollHeight'.format(element)))
-        self._driver.execute_script('{}.scrollTo(0, {})'.format(element, scroll_height))
+        scroll_height = float(self.browser.execute_script('return {}.scrollHeight'.format(element)))
+        self.browser.execute_script('{}.scrollTo(0, {})'.format(element, scroll_height))
 
     def _get_partial_matched_elements(self, by, selector):
-        return self._driver.find_elements(By.XPATH, self.constructPartialSelector(by, selector))
+        return self.browser.find_elements(By.XPATH, self.constructPartialSelector(by, selector))
 
     def _get_output_dir(self, folder_name):
         def create_path(path):
@@ -237,12 +293,12 @@ class UITester(ABC):
         create_path(output_dir)
         output_dir = os.path.join(output_dir, self._test_name)
         create_path(output_dir)
-        output_dir = os.path.join(output_dir, self._get_browser())
+        output_dir = os.path.join(output_dir, self._get_browser_name())
         create_path(output_dir)
         return output_dir
 
-    def _get_browser(self):
-        return self._driver.capabilities['browserName']
+    def _get_browser_name(self):
+        return self.browser.capabilities['browserName']
 
 
 class WorksheetTest(UITester):
@@ -272,17 +328,17 @@ class EditWorksheetTest(UITester):
         # Create a new worksheet
         self.click(By.XPATH, '//*[@title="New Worksheet"]')
         self.fill_field(By.ID, 'name', self.make_name_unique('test-worksheet'))
-        self._driver.find_element(By.XPATH, "//span[.='Confirm']").find_element(
+        self.browser.find_element(By.XPATH, "//span[.='Confirm']").find_element(
             By.XPATH, './..'
         ).click()
         self.longer_pause()
 
         # Add a title to the worksheet
         self.click(By.CLASS_NAME, 'editable-field')
-        self._driver.switch_to.active_element.send_keys(
+        self.browser.switch_to.active_element.send_keys(
             'Some Random Title for the UI Test Edit Worksheet in CodaLab'
         )
-        self._driver.switch_to.active_element.send_keys(Keys.ENTER)
+        self.browser.switch_to.active_element.send_keys(Keys.ENTER)
 
         # Add text to the new worksheet
         self.add_text_to_worksheet('This is some text. ' * 25)
@@ -291,23 +347,39 @@ class EditWorksheetTest(UITester):
         self.add_run_to_worksheet('echo hello')
         self.rerun_last_bundle()
 
-        # Test keyboard shortcuts
-        self.add_run_to_worksheet('echo keyboard shortcut', use_keyboard_shortcut=True)
-        # TODO: Keyboard shortcut "a n" doesn't seem to work?
-        # self.rerun_last_bundle(use_keyboard_shortcut=True)
-
         # Edit metadata of the last bundle
         self.edit_last_bundle_metadata(
             'New Name Given to this Bundle', 'New Description given to this bundle. ' * 5, 'none'
         )
 
+        # Test keyboard shortcuts
+        self.add_run_to_worksheet('echo goodbye', use_keyboard_shortcut=True)
+        self.rerun_last_bundle(use_keyboard_shortcut=True)
+        # Select the last two bundles and delete them
+        # shift + g = Jump to the last bundle
+        self.send_keyboard_shortcut(Keys.SHIFT + 'g')
+        # x = Select the bundle row
+        self.send_keyboard_shortcut('x')
+        self.send_keyboard_shortcut(Keys.ARROW_UP)
+        self.send_keyboard_shortcut('x')
+        # Backspace = Attempt to delete the selected bundles
+        self.send_keyboard_shortcut(Keys.BACKSPACE)
+        self.browser.find_elements_by_tag_name('button')[-1].click()
+        # Wait for bundles to be deleted before proceeding
+        self.longer_pause()
+        # Add some more text via keyboard shortcuts
+        self.add_text_to_worksheet('Some more text. ' * 25, use_keyboard_shortcut=True)
+        # Edit source
+        self.edit_source('The End.', use_keyboard_shortcut=True)
+
         # Refresh the page to ensure that new changes are persisted
-        self._driver.refresh()
+        self.browser.refresh()
         self.wait_until_worksheet_content_loads()
-        self.expand_last_bundle()
+        self.toggle_web_terminal(use_keyboard_shortcut=True)
+        self.refresh_worksheet()
 
         # Take screenshots and compare to the existing baseline images
-        num_of_screenshots = 2
+        num_of_screenshots = 1
         self.output_images('worksheet_container', num_of_screenshots)
         self.compare_to_baselines(num_of_screenshots)
 
