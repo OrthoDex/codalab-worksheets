@@ -279,7 +279,7 @@ class EditWorksheetTest(UITester):
         self._driver.switch_to.active_element.send_keys(Keys.ENTER)
 
         # Add text to the new worksheet
-        self.add_text_to_worksheet('This is some text. ' * 25)
+        # self.add_text_to_worksheet('This is some text. ' * 25)
 
         # Add a bundle and rerun it
         self.add_run_to_worksheet('echo hello')
