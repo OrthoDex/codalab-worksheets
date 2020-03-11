@@ -155,9 +155,7 @@ class UITester(ABC):
         self.pause()
         self.scroll_to_bottom('worksheet_container')
         last_text_box = self.browser.find_elements_by_tag_name('textarea')[-1]
-        # TODO: check this -tony
-        # last_text_box.send_keys(text)
-        webdriver.ActionChains(self.browser).move_to_element(last_text_box).send_keys(text).perform()
+        self.focus_and_send_keys(last_text_box, text)
         if use_keyboard_shortcut:
             self.save_edit_keyboard_shortcut(last_text_box)
         else:
@@ -166,7 +164,9 @@ class UITester(ABC):
 
     def save_edit_keyboard_shortcut(self, element):
         # Control + Enter = Save current edit
-        element.send_keys(Keys.CONTROL + Keys.ENTER)
+        webdriver.ActionChains(self.browser).move_to_element(element).key_down(
+            Keys.CONTROL
+        ).key_down(Keys.ENTER).key_up(Keys.ENTER).key_up(Keys.CONTROL).perform()
 
     def refresh_worksheet(self):
         # Shift + r = Refresh worksheet
@@ -184,6 +184,9 @@ class UITester(ABC):
 
     def click(self, by, selector):
         self.browser.find_element(by, selector).click()
+
+    def focus_and_send_keys(self, element, keys):
+        webdriver.ActionChains(self.browser).move_to_element(element).send_keys(keys).perform()
 
     def send_keyboard_shortcut(self, keys):
         self.pause()
