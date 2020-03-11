@@ -150,8 +150,6 @@ class UITester(ABC):
         if use_keyboard_shortcut:
             # at = Add text
             self.send_keyboard_shortcut('at')
-            # TODO: tony remove this
-            time.sleep(10)
         else:
             self.click(By.CSS_SELECTOR, '[aria-label="Add Text"]')
         self.pause()
@@ -368,10 +366,10 @@ class EditWorksheetTest(UITester):
         self.browser.find_elements_by_tag_name('button')[-1].click()
         # Wait for bundles to be deleted before proceeding
         self.longer_pause()
-        # Add some more text via keyboard shortcuts
-        self.add_text_to_worksheet('Some more text. ' * 25, use_keyboard_shortcut=True)
         # Edit source
         self.edit_source('The End.', use_keyboard_shortcut=True)
+        # Add some more text via keyboard shortcuts
+        self.add_text_to_worksheet('Some more text. ' * 25, use_keyboard_shortcut=True)
 
         # Refresh the page to ensure that new changes are persisted
         self.browser.refresh()
