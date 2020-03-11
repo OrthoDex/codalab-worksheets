@@ -372,7 +372,6 @@ class EditWorksheetTest(UITester):
         # Wait for bundles to be deleted before proceeding
         self.longer_pause()
         # Add some more text via keyboard shortcuts
-        # TODO: disable for now -tony
         self.add_text_to_worksheet('Some more text. ' * 25, use_keyboard_shortcut=True)
         # Edit source
         self.edit_source('The End.', use_keyboard_shortcut=True)
