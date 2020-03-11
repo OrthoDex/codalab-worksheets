@@ -155,7 +155,9 @@ class UITester(ABC):
         self.pause()
         self.scroll_to_bottom('worksheet_container')
         last_text_box = self.browser.find_elements_by_tag_name('textarea')[-1]
-        last_text_box.send_keys(text)
+        # TODO: check this -tony
+        # last_text_box.send_keys(text)
+        webdriver.ActionChains(self.browser).move_to_element(last_text_box).send_keys(text).perform()
         if use_keyboard_shortcut:
             self.save_edit_keyboard_shortcut(last_text_box)
         else:
@@ -366,11 +368,11 @@ class EditWorksheetTest(UITester):
         self.browser.find_elements_by_tag_name('button')[-1].click()
         # Wait for bundles to be deleted before proceeding
         self.longer_pause()
-        # Edit source
-        self.edit_source('The End.', use_keyboard_shortcut=True)
         # Add some more text via keyboard shortcuts
         # TODO: disable for now -tony
-        # self.add_text_to_worksheet('Some more text. ' * 25, use_keyboard_shortcut=True)
+        self.add_text_to_worksheet('Some more text. ' * 25, use_keyboard_shortcut=True)
+        # Edit source
+        self.edit_source('The End.', use_keyboard_shortcut=True)
 
         # Refresh the page to ensure that new changes are persisted
         self.browser.refresh()
