@@ -36,17 +36,17 @@ class UITester(ABC):
             if args.headless:
                 browser_options.add_argument('--headless')
 
-        # Test Chrome
-        options = ChromeOptions()
-        add_headless(options)
-        self.browser = webdriver.Chrome(chrome_options=options)
-        self.test()
-        self.browser.close()
-
         # Test Firefox
         options = FirefoxOptions()
         add_headless(options)
         self.browser = webdriver.Firefox(log_path='', firefox_options=options)
+        self.test()
+        self.browser.close()
+
+        # Test Chrome
+        options = ChromeOptions()
+        add_headless(options)
+        self.browser = webdriver.Chrome(chrome_options=options)
         self.test()
         self.browser.close()
 
@@ -310,7 +310,6 @@ class WorksheetTest(UITester):
         super().__init__('worksheet_rendering')
 
     def test(self):
-        self.set_browser_size()
         self.login()
         self.wait_until_worksheet_content_loads()
         self.click(By.LINK_TEXT, 'Small Worksheet [cl_small_worksheet]')
@@ -390,10 +389,7 @@ class EditWorksheetTest(UITester):
 
 def main():
     # Register UI tests here to run them
-    all_tests = [
-        # WorksheetTest(),
-        EditWorksheetTest()
-    ]
+    all_tests = [WorksheetTest(), EditWorksheetTest()]
 
     start_time = time.time()
     for test in all_tests:
