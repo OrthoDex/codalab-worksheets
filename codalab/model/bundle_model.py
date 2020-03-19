@@ -162,7 +162,7 @@ class BundleModel(object):
         """
         with self.engine.begin() as connection:
             rows = connection.execute(query).fetchall()
-        return [row[0] for row in rows]
+            return [row[0] for row in rows]
 
     # ==========================================================================
     # Bundle info accessor methods
@@ -486,16 +486,23 @@ class BundleModel(object):
             elif key == 'memo':
                 command = value[0]
                 bundle_uuids = value[1:]
-                logger.info("command = {}, uuids = {}".format(command, bundle_uuids))
+                logger.info(">>>>>>>>>> command = {}, uuids = {}".format(command, bundle_uuids))
                 dep_condition = []
                 for uuid in bundle_uuids:
                     dep_condition.append(cl_bundle_dependency.c.parent_uuid == uuid)
+                or_statement = or_(*dep_condition)
+                logger.info(
+                    ">>>>>> orstatemnet = {}".format(
+                        or_statement.compile(compile_kwargs={"literal_binds": True})
+                    )
+                )
 
-                condition = and_(cl_bundle.c.command == command, or_(*dep_condition))
+                condition = and_(cl_bundle.c.command == command, or_statement)
+
                 join = cl_bundle.join(
                     cl_bundle_dependency, cl_bundle.c.uuid == cl_bundle_dependency.c.child_uuid
                 )
-                inner_query = (
+                matched_command = (
                     select(
                         [
                             cl_bundle_dependency.c.child_uuid,
@@ -504,13 +511,23 @@ class BundleModel(object):
                     )
                     .select_from(join)
                     .where(condition)
-                    .label('inner_query')
+                    .group_by(cl_bundle_dependency.c.child_uuid)
+                    .alias("matched_command")
                 )
+                logger.info(
+                    ">>>>>>> inner query = {}".format(
+                        matched_command.compile(compile_kwargs={"literal_binds": True})
+                    )
+                )
+                result_1 = self._execute_query(matched_command, True)
+                logger.info(">>>>>>> inner match = {}".format(result_1))
                 memo_query = (
-                    select([inner_query.c.child_uuid])
-                    .select_from(inner_query)
-                    .where(inner_query.c.cnt == len(bundle_uuids))
+                    select([matched_command.c.child_uuid])
+                    .select_from(matched_command)
+                    .where(matched_command.c.cnt == len(bundle_uuids))
                 )
+                result_2 = self._execute_query(memo_query, True)
+                logger.info(">>>>>>> final results = {}".format(result_2))
                 is_memo = True
             # Special fields
             elif key == 'dependency':
