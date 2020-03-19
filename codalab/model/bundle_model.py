@@ -331,28 +331,6 @@ class BundleModel(object):
             depth -= 1
         return visited
 
-    def memo_bundles(self, keywords):
-        m = SEARCH_KEYWORD_REGEX.match(keywords)  # key=value
-        if m:
-            key, value = m.group(1), m.group(2)
-            if ',' in value:
-                value = value.split(",")
-            else:
-                logger.info("memo missing params")
-        else:
-            logger.info("memo wrong regex")
-        command = value[0]
-        bundle_uuid = value[1]
-        condition = and_(cl_bundle.c.command == command,
-                         cl_bundle_dependency.c.child_uuid == bundle_uuid)
-        join = cl_bundle.join(cl_bundle_dependency, cl_bundle.c.uuid == cl_bundle_dependency.c.child_uuid)
-        query = select([cl_bundle_dependency.c.parent_uuid]).select_from(join).where(condition)
-
-        result = self._execute_query(query)
-        logger.info("memo result = {}".format(result))
-        return {'result': result, 'is_aggregate': False}
-
-
     def search_bundles(self, user_id, keywords):
         """
         Returns a bundle search result dict where:
@@ -388,7 +366,7 @@ class BundleModel(object):
         sort_key = [None]
         sum_key = [None]
         aux_fields = []  # Fields (e.g., sorting) that we need to include in the query
-
+        is_memo = False
         # Number nested subqueries
         subquery_index = [0]
 
@@ -507,12 +485,32 @@ class BundleModel(object):
                 )
             elif key == 'memo':
                 command = value[0]
-                bundle_uuid = value[1]
-                logger.info("command = {}, uuid = {}".format(command, bundle_uuid))
-                condition = and_(cl_bundle.c.command == command,
-                                 cl_bundle_dependency.c.child_uuid == bundle_uuid)
-                join = cl_bundle.join(cl_bundle_dependency, cl_bundle.c.uuid == cl_bundle_dependency.c.child_uuid)
-                memo_query = select([cl_bundle_dependency.c.parent_uuid]).select_from(join).where(condition)
+                bundle_uuids = value[1:]
+                logger.info("command = {}, uuids = {}".format(command, bundle_uuids))
+                dep_condition = []
+                for uuid in bundle_uuids:
+                    dep_condition.append(cl_bundle_dependency.c.parent_uuid == uuid)
+
+                condition = and_(cl_bundle.c.command == command, or_(*dep_condition))
+                join = cl_bundle.join(
+                    cl_bundle_dependency, cl_bundle.c.uuid == cl_bundle_dependency.c.child_uuid
+                )
+                inner_query = (
+                    select(
+                        [
+                            cl_bundle_dependency.c.child_uuid,
+                            func.count(cl_bundle_dependency.c.parent_uuid).label('cnt'),
+                        ]
+                    )
+                    .select_from(join)
+                    .where(condition)
+                    .label('inner_query')
+                )
+                memo_query = (
+                    select([inner_query.c.child_uuid])
+                    .select_from(inner_query)
+                    .where(inner_query.c.cnt == len(bundle_uuids))
+                )
                 is_memo = True
             # Special fields
             elif key == 'dependency':
