@@ -162,7 +162,7 @@ class BundleModel(object):
         """
         with self.engine.begin() as connection:
             rows = connection.execute(query).fetchall()
-            return [row[0] for row in rows]
+        return [row[0] for row in rows]
 
     # ==========================================================================
     # Bundle info accessor methods
