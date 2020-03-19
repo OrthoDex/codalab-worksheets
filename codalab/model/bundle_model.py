@@ -331,6 +331,28 @@ class BundleModel(object):
             depth -= 1
         return visited
 
+    def memo_bundles(self, keywords):
+        m = SEARCH_KEYWORD_REGEX.match(keywords)  # key=value
+        if m:
+            key, value = m.group(1), m.group(2)
+            if ',' in value:
+                value = value.split(",")
+            else:
+                logger.info("memo missing params")
+        else:
+            logger.info("memo wrong regex")
+        command = value[0]
+        bundle_uuid = value[1]
+        condition = and_(cl_bundle.c.command == command,
+                         cl_bundle_dependency.c.child_uuid == bundle_uuid)
+        join = cl_bundle.join(cl_bundle_dependency, cl_bundle.c.uuid == cl_bundle_dependency.c.child_uuid)
+        query = select([cl_bundle_dependency.c.parent_uuid]).select_from(join).where(condition)
+
+        result = self._execute_query(query)
+        logger.info("memo result = {}".format(result))
+        return {'result': result, 'is_aggregate': False}
+
+
     def search_bundles(self, user_id, keywords):
         """
         Returns a bundle search result dict where:
@@ -483,6 +505,15 @@ class BundleModel(object):
                         )
                     )
                 )
+            elif key == 'memo':
+                command = value[0]
+                bundle_uuid = value[1]
+                logger.info("command = {}, uuid = {}".format(command, bundle_uuid))
+                condition = and_(cl_bundle.c.command == command,
+                                 cl_bundle_dependency.c.child_uuid == bundle_uuid)
+                join = cl_bundle.join(cl_bundle_dependency, cl_bundle.c.uuid == cl_bundle_dependency.c.child_uuid)
+                memo_query = select([cl_bundle_dependency.c.parent_uuid]).select_from(join).where(condition)
+                is_memo = True
             # Special fields
             elif key == 'dependency':
                 # Match uuid of dependency
@@ -604,6 +635,8 @@ class BundleModel(object):
             )
             # Sum the numbers
             query = select([func.sum(query.c.num)])
+        elif is_memo:
+            query = memo_query
         else:
             query = (
                 select([cl_bundle.c.uuid] + aux_fields)
