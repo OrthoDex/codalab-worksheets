@@ -115,6 +115,8 @@ def _fetch_bundles():
             return json_api_meta({}, {'result': search_result['result']})
         # If not aggregate this is a list
         bundle_uuids = search_result['result']
+        logger.info("[_fetch_bundles] bundle_uuids = {}".format(bundle_uuids))
+
     elif specs:
         # Resolve bundle specs
         bundle_uuids = canonicalize.get_bundle_uuids(

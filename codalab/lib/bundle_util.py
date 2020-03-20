@@ -147,7 +147,7 @@ def mimic_bundles(
             }
             for dep in old_info['dependencies']
         ]
-
+        #existing_bundles_uuid = client.fetch('bundles', params={'keywords': old_info['command']+','+old_bundle_uuid})
         # If there are no inputs or if we're downstream of any inputs, we need to make a new bundle.
         lone_output = len(old_inputs) == 0 and old_bundle_uuid == old_output
         downstream_of_inputs = any(
