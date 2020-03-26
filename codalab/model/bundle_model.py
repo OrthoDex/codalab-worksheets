@@ -488,57 +488,38 @@ class BundleModel(object):
                 bundle_uuids = value[1:]
                 dep_condition = []
                 logger.info("command = {}, bundle_uuids = {}".format(command, bundle_uuids))
-                for uuid in bundle_uuids:
-                    dep_condition.append(cl_bundle_dependency.c.parent_uuid == uuid)
-                condition = and_(cl_bundle.c.command == command, or_(*dep_condition))
 
-                filter_command = (
+                filter_on_command = (
                     select([cl_bundle.c.uuid])
                     .select_from(cl_bundle)
                     .where(cl_bundle.c.command == command)
-                    .alias("fitler_command")
-                )
-                filter_dependencies = (
-                    select([cl_bundle_dependency.c.child_uuid, cl_bundle_dependency.c.parent_uuid])
-                    .select_from(cl_bundle_dependency)
-                    .where(or_(*dep_condition))
-                    .alias("filter_dependencies")
-                )
-                join = filter_command.join(
-                    filter_dependencies, filter_command.c.uuid == filter_dependencies.c.child_uuid
-                )
-
-                matched_command = (
-                    select(
-                        [
-                            filter_dependencies.c.child_uuid,
-                            func.count(filter_dependencies.c.parent_uuid).lable('cnt'),
-                        ]
-                    )
-                    .select_from(join)
-                    .group_by(filter_dependencies.c.child_uuid)
-                    .alias("matched_command")
-                )
-
-                join = cl_bundle.join(
-                    cl_bundle_dependency, cl_bundle.c.uuid == cl_bundle_dependency.c.child_uuid
+                    .alias("filter_on_command")
                 )
                 matched_command = (
                     select(
                         [
                             cl_bundle_dependency.c.child_uuid,
+                            cl_bundle_dependency.c.parent_uuid,
                             func.count(cl_bundle_dependency.c.parent_uuid).label('cnt'),
                         ]
                     )
-                    .select_from(join)
-                    .where(condition)
+                    .select_from(
+                        filter_on_command.join(
+                            cl_bundle_dependency,
+                            filter_on_command.c.uuid == cl_bundle_dependency.c.child_uuid,
+                        )
+                    )
                     .group_by(cl_bundle_dependency.c.child_uuid)
                     .alias("matched_command")
                 )
+
+                for uuid in bundle_uuids:
+                    dep_condition.append(matched_command.c.parent_uuid == uuid)
+
                 memo_query = (
                     select([matched_command.c.child_uuid])
                     .select_from(matched_command)
-                    .where(matched_command.c.cnt == len(bundle_uuids))
+                    .where(and_(or_(*dep_condition), matched_command.c.cnt == len(bundle_uuids)))
                 )
                 is_memo = True
             # Special fields

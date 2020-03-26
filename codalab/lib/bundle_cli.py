@@ -1558,9 +1558,9 @@ class BundleCLI(object):
         for uuid, target in targets:
             dependency.append(uuid)
         dependency_str = ','.join(dependency)
-        existing_bundles_uuid = client.fetch('bundles', params={'keywords': args.command + ',' + dependency_str})
-        print("final result = {}".format(existing_bundles_uuid))
-        '''
+        #existing_bundles_uuid = client.fetch('bundles', params={'keywords': args.command + ',' + dependency_str})
+        #print("final result = {}".format(existing_bundles_uuid))
+
         new_bundle = client.create(
             'bundles',
             self.derive_bundle(RunBundle.BUNDLE_TYPE, args.command, targets, metadata),
@@ -1569,7 +1569,7 @@ class BundleCLI(object):
 
         print(new_bundle['uuid'], file=self.stdout)
         self.wait(client, args, new_bundle['uuid'])
-        '''
+
 
     @Commands.command(
         'docker',
