@@ -140,9 +140,6 @@ SERVER_COMMANDS = (
 )
 
 OTHER_COMMANDS = ('help', 'status', 'alias', 'config', 'logout')
-# Markdown headings
-HEADING_LEVEL_2 = '## '
-HEADING_LEVEL_3 = '### '
 
 
 class CodaLabArgumentParser(argparse.ArgumentParser):
@@ -261,7 +258,7 @@ class Commands(object):
         return register_command
 
     @classmethod
-    def help_text(cls, verbose, markdown):
+    def help_text(cls, verbose):
         def command_name(command):
             name = command
             aliases = cls.commands[command].aliases
@@ -310,8 +307,6 @@ class Commands(object):
                 )
 
             if verbose:
-                if markdown:
-                    name = HEADING_LEVEL_3 + name
                 return '%s%s:\n%s\n%s' % (
                     ' ' * indent,
                     name,
@@ -329,39 +324,31 @@ class Commands(object):
         def command_group_help_text(commands):
             return '\n'.join([command_help_text(command) for command in commands])
 
-        def doc_formatter():
-            return HEADING_LEVEL_2 if verbose and markdown else ''
-
-        def command_formatter():
-            return '`' if verbose and markdown else ''
-
         return (
             textwrap.dedent(
                 """
-        Usage: {inline_code}cl <command> <arguments>{inline_code}
+        Usage: cl <command> <arguments>
 
-        {heading}Commands for bundles:
+        Commands for bundles:
         {bundle_commands}
 
-        {heading}Commands for worksheets:
+        Commands for worksheets:
         {worksheet_commands}
 
-        {heading}Commands for groups and permissions:
+        Commands for groups and permissions:
         {group_and_permission_commands}
 
-        {heading}Commands for users:
+        Commands for users:
         {user_commands}
 
-        {heading}Commands for managing server:
+        Commands for managing server:
         {server_commands}
 
-        {heading}Other commands:
+        Other commands:
         {other_commands}
         """
             )
             .format(
-                heading=doc_formatter(),
-                inline_code=command_formatter(),
                 bundle_commands=command_group_help_text(BUNDLE_COMMANDS),
                 worksheet_commands=command_group_help_text(WORKSHEET_COMMANDS),
                 group_and_permission_commands=command_group_help_text(
@@ -870,19 +857,12 @@ class BundleCLI(object):
             'Show usage information for commands.',
             '  help           : Show brief description for all commands.',
             '  help -v        : Show full usage information for all commands.',
-            '  help -v -m     : Show full usage information for all commands in Markdown format.',
             '  help <command> : Show full usage information for <command>.',
         ],
         arguments=(
             Commands.Argument('command', help='name of command to look up', nargs='?'),
             Commands.Argument(
                 '-v', '--verbose', action='store_true', help='Display all options of all commands.'
-            ),
-            Commands.Argument(
-                '-m',
-                '--markdown',
-                action='store_true',
-                help='Auto-generate all options of all commands for CLI markdown in Markdown format.',
             ),
         ),
     )
@@ -891,7 +871,7 @@ class BundleCLI(object):
         if args.command:
             self.do_command([args.command, '--help'])
             return
-        print(Commands.help_text(args.verbose, args.markdown), file=self.stdout)
+        print(Commands.help_text(args.verbose), file=self.stdout)
 
     @Commands.command('status', aliases=('st',), help='Show current client status.')
     def do_status_command(self, args):
@@ -1558,9 +1538,9 @@ class BundleCLI(object):
         for uuid, target in targets:
             dependency.append(uuid)
         dependency_str = ','.join(dependency)
-        #existing_bundles_uuid = client.fetch('bundles', params={'keywords': args.command + ',' + dependency_str})
-        #print("final result = {}".format(existing_bundles_uuid))
-
+        existing_bundles_uuid = client.fetch('bundles', params={'keywords': args.command + ',' + dependency_str})
+        print("final result = {}".format(existing_bundles_uuid))
+        '''
         new_bundle = client.create(
             'bundles',
             self.derive_bundle(RunBundle.BUNDLE_TYPE, args.command, targets, metadata),
@@ -1569,7 +1549,7 @@ class BundleCLI(object):
 
         print(new_bundle['uuid'], file=self.stdout)
         self.wait(client, args, new_bundle['uuid'])
-
+        '''
 
     @Commands.command(
         'docker',
@@ -1659,7 +1639,8 @@ class BundleCLI(object):
             Commands.Argument('-d', '--description', help='New bundle description.'),
             Commands.Argument(
                 '--anonymous',
-                help='Set bundle to be anonymous (identity of the owner will NOT be visible to users without \'all\' permission on the bundle).',
+                help='Set bundle to be anonymous (identity of the owner will NOT \n'
+                'be visible to users without \'all\' permission on the bundle).',
                 dest='anonymous',
                 action='store_true',
                 default=None,
@@ -2958,7 +2939,8 @@ class BundleCLI(object):
             ),
             Commands.Argument(
                 '--anonymous',
-                help='Set worksheet to be anonymous (identity of the owner will NOT be visible to users without \'all\' permission on the worksheet).',
+                help='Set worksheet to be anonymous (identity of the owner will NOT \n'
+                'be visible to users without \'all\' permission on the worksheet).',
                 dest='anonymous',
                 action='store_true',
                 default=None,

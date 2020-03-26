@@ -520,6 +520,7 @@ class BundleModel(object):
                     select([matched_command.c.child_uuid])
                     .select_from(matched_command)
                     .where(and_(or_(*dep_condition), matched_command.c.cnt == len(bundle_uuids)))
+
                 )
                 is_memo = True
             # Special fields
