@@ -46,7 +46,7 @@ def mimic_bundles(
     worksheet_uuid,
     depth,
     shadow,
-    dry_run,
+    dry_run=True,
     metadata_override=None,
     skip_prelude=False,
 ):
@@ -147,7 +147,28 @@ def mimic_bundles(
             }
             for dep in old_info['dependencies']
         ]
-        #existing_bundles_uuid = client.fetch('bundles', params={'keywords': old_info['command']+','+old_bundle_uuid})
+
+        new_dependencies_list = []
+        for dep in new_dependencies:
+            print(dep)
+            new_dependencies_list.append(dep['parent_uuid'])
+        print(">>>> old_uuid = {}, memo_query = {}".format(old_info['uuid'], new_dependencies_list))
+        existing_uuids = client.fetch(
+            'bundles',
+            params={'command': old_info['command'], 'dependencies': new_dependencies_list},
+        )
+        print('bundle_util existing_uuids = {}'.format(existing_uuids))
+        if len(existing_uuids) > 0:
+            new_info = existing_uuids[0]
+            new_bundle_uuid = new_info['uuid']
+            old_to_new[old_bundle_uuid] = new_info['uuid']  # Cache it
+            plan.append((old_info, new_info))
+            downstream.add(old_bundle_uuid)
+            created_uuids.add(new_bundle_uuid)
+        else:
+            new_bundle_uuid = old_bundle_uuid
+
+        '''
         # If there are no inputs or if we're downstream of any inputs, we need to make a new bundle.
         lone_output = len(old_inputs) == 0 and old_bundle_uuid == old_output
         downstream_of_inputs = any(
@@ -215,8 +236,8 @@ def mimic_bundles(
             created_uuids.add(new_bundle_uuid)
         else:
             new_bundle_uuid = old_bundle_uuid
+        '''
 
-        old_to_new[old_bundle_uuid] = new_bundle_uuid  # Cache it
         return new_bundle_uuid
 
     if old_output:

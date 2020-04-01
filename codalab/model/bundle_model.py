@@ -366,7 +366,6 @@ class BundleModel(object):
         sort_key = [None]
         sum_key = [None]
         aux_fields = []  # Fields (e.g., sorting) that we need to include in the query
-        is_memo = False
         # Number nested subqueries
         subquery_index = [0]
 
@@ -483,46 +482,6 @@ class BundleModel(object):
                         )
                     )
                 )
-            elif key == 'memo':
-                command = value[0]
-                bundle_uuids = value[1:]
-                dep_condition = []
-                logger.info("command = {}, bundle_uuids = {}".format(command, bundle_uuids))
-
-                filter_on_command = (
-                    select([cl_bundle.c.uuid])
-                    .select_from(cl_bundle)
-                    .where(cl_bundle.c.command == command)
-                    .alias("filter_on_command")
-                )
-                matched_command = (
-                    select(
-                        [
-                            cl_bundle_dependency.c.child_uuid,
-                            cl_bundle_dependency.c.parent_uuid,
-                            func.count(cl_bundle_dependency.c.parent_uuid).label('cnt'),
-                        ]
-                    )
-                    .select_from(
-                        filter_on_command.join(
-                            cl_bundle_dependency,
-                            filter_on_command.c.uuid == cl_bundle_dependency.c.child_uuid,
-                        )
-                    )
-                    .group_by(cl_bundle_dependency.c.child_uuid)
-                    .alias("matched_command")
-                )
-
-                for uuid in bundle_uuids:
-                    dep_condition.append(matched_command.c.parent_uuid == uuid)
-
-                memo_query = (
-                    select([matched_command.c.child_uuid])
-                    .select_from(matched_command)
-                    .where(and_(or_(*dep_condition), matched_command.c.cnt == len(bundle_uuids)))
-
-                )
-                is_memo = True
             # Special fields
             elif key == 'dependency':
                 # Match uuid of dependency
@@ -644,8 +603,6 @@ class BundleModel(object):
             )
             # Sum the numbers
             query = select([func.sum(query.c.num)])
-        elif is_memo:
-            query = memo_query
         else:
             query = (
                 select([cl_bundle.c.uuid] + aux_fields)
@@ -717,6 +674,46 @@ class BundleModel(object):
                 query = select([cl_bundle.c.uuid]).where(clause)
                 query = query.order_by(cl_bundle.c.id.desc()).limit(max_results)
 
+        return self._execute_query(query)
+
+    def get_memoized_bundles(self, user_id, command, bundle_uuids, failed=False):
+        logger.info("command = {}, bundle_uuids = {}".format(command, bundle_uuids))
+
+        filter_on_command = (
+            select([cl_bundle.c.uuid])
+            .select_from(cl_bundle)
+            .where(and_(cl_bundle.c.command == command, cl_bundle.c.owner_id == user_id))
+            .alias("filter_on_command")
+        )
+        matched_command = (
+            select(
+                [
+                    cl_bundle_dependency.c.child_uuid,
+                    cl_bundle_dependency.c.parent_uuid,
+                    func.count(cl_bundle_dependency.c.parent_uuid).label('cnt'),
+                ]
+            )
+            .select_from(
+                filter_on_command.join(
+                    cl_bundle_dependency,
+                    filter_on_command.c.uuid == cl_bundle_dependency.c.child_uuid,
+                )
+            )
+            .group_by(cl_bundle_dependency.c.child_uuid)
+            .alias("matched_command")
+        )
+        dep_condition = [
+            matched_command.c.parent_uuid.like('%' + uuid + '%') for uuid in bundle_uuids
+        ]
+
+        if len(bundle_uuids) == 0:
+            query = filter_on_command
+        else:
+            query = (
+                select([matched_command.c.child_uuid])
+                .select_from(matched_command)
+                .where(and_(or_(*dep_condition), matched_command.c.cnt == len(bundle_uuids)))
+            )
         return self._execute_query(query)
 
     def batch_get_bundles(self, **kwargs):
